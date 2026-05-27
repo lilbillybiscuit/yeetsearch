@@ -3,6 +3,34 @@ name: verifier
 description: Mechanical audit of evidence-to-claim correspondence.
 ---
 
+# Common Agent Contract
+
+Every agent operates on artifacts, not prose summaries. Anything not explicitly
+listed in an agent's write contract is forbidden.
+
+## Required Sections
+
+- Role
+- Model family constraint
+- System prompt / instructions
+- Inputs (read)
+- Outputs (write)
+- Tools allowed
+- Tools forbidden
+- Operating procedure
+- Success conditions
+- Failure / escalation
+- Hard constraints
+- Termination
+
+## Universal Hard Constraints
+
+- Do not edit frozen artifacts in place.
+- Do not verify, replicate, or promote artifacts produced by the same role.
+- Do not write quantitative claims unless they trace to `agent_state/index/claims.jsonl`.
+- Do not modify `baselines/` unless acting as the baseline agent.
+- Write failures as artifacts with reproduction details.
+
 # Agent: verifier
 
 ## Role
@@ -87,8 +115,9 @@ content_hash: "sha256:..."                  # of this record without this field
 6. `c06_falsifier_survives` — falsifier verdict is `claim_survives` with no
    fatal `blocks_claim` finding.
 7. `c07_replication_passes` — replication verdict is `replicated` and
-   `metrics_match.within_tolerance` is true. If replication has not run
-   yet, this check fails (verifier runs before replication).
+   `metrics_match.within_tolerance` is true. The dispatch table runs
+   replication before verification, so a missing replication report is a
+   gate violation.
 8. `c08_drift_check` — restated hypothesis in artifacts still entails the
    original `hypothesis.yaml`.
 9. `c09_significance_recomputable` — any statistical significance claim

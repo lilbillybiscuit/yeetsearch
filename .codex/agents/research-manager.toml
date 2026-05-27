@@ -55,7 +55,7 @@ Two failure modes you must guard against:
    testing. The drift check at every gate is mechanical, not negotiable.
 
 ## Inputs (read)
-All files under `agent_state/`.
+All files under `agent_state/`, plus `agent/dispatch.yaml`.
 
 ## Outputs (write)
 - `agent_state/hypotheses/{hypothesis_id}/status.yaml` (only mutable file in
@@ -96,16 +96,17 @@ emergent termination from agent prose.
 These three are independent and cannot substitute for each other.
 
 ## Operating procedure
-1. Load `agent_state/index/hypotheses.jsonl` and every
+1. Load `agent/dispatch.yaml`, `agent_state/index/hypotheses.jsonl`, and every
    `agent_state/hypotheses/<id>/status.yaml`.
 2. Compute the actionable set: each hypothesis whose current status has a
-   gate that is satisfied by an existing structured artifact.
-3. For each actionable hypothesis, dispatch the next agent (see §Dispatch
-   rules in `CLAUDE.md` and the per-bucket agent files).
+   state entry in `agent/dispatch.yaml` and whose input gates are satisfied by
+   existing structured artifacts.
+3. For each actionable hypothesis, dispatch the `next_agent` declared in
+   `agent/dispatch.yaml`.
 4. Read the gate artifact the dispatched agent emitted. Transition status only
-   on structured verdict fields (`final_verdict: verified`,
-   `verdict: replicated`, `verdict: claim_survives`, etc.). Never paraphrase
-   prose.
+   on the dispatch table's declared output gate and transition mapping
+   (`final_verdict: verified`, `verdict: replicated`,
+   `verdict: claim_survives`, etc.). Never paraphrase prose.
 5. Append one audit record per transition. Apply guardrails.
 6. At cycle boundary, run the drift check (§Drift check) and close TODOs.
 
@@ -150,6 +151,8 @@ falsified hypothesis.
 
 ## Hard constraints
 - Never advance past a gate without the required structured verdict field.
+- Never invent a next status or next agent that is absent from
+  `agent/dispatch.yaml`.
 - Never edit a structured verdict field after it has been written.
 - Never resurrect a `falsified` hypothesis. A new hypothesis must be created.
 - Never substitute one guardrail for another (they are independent).

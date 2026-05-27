@@ -21,6 +21,7 @@ required_files=(
   "agent/git-hooks/commit-msg"
   "agent/containers/replication.Dockerfile"
   "agent/bin/agentfw"
+  "agent/dispatch.yaml"
   "agent/agents/common-contract.md"
 )
 

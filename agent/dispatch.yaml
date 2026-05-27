@@ -1,0 +1,224 @@
+version: 1
+
+# The research manager is the only role that mutates status.yaml. Every other
+# agent writes its own artifact; the manager reads the declared output gate and
+# applies the transition below.
+manager: research-manager
+
+terminal_statuses:
+  - rejected
+  - spec_blocked
+  - falsified
+  - bug_budget_exhausted
+  - verification_failed
+  - replication_failed
+  - reported
+  - integrated
+  - archived
+  - inconclusive
+
+states:
+  proposed:
+    next_agent: triage
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/hypothesis.yaml"
+        exists: true
+      - path: "agent_state/hypotheses/<hypothesis_id>/status.yaml"
+        field: "current_status"
+        equals: "proposed"
+    output_gate:
+      path: "agent_state/triage/<cycle_id>/<triage_id>.yaml"
+      field: "candidates[<hypothesis_id>].decision"
+      pass_values: ["selected"]
+      fail_values: ["rejected"]
+    transitions:
+      selected: triaged
+      rejected: rejected
+
+  triaged:
+    next_agent: specification
+    input_gates:
+      - artifact: "triage"
+        field: "candidates[<hypothesis_id>].decision"
+        equals: "selected"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/spec.yaml"
+      required_fields:
+        - "content_hash"
+        - "hypothesis_hash"
+        - "minimal_implementation"
+        - "correctness_criteria"
+        - "evaluation"
+        - "required_resources"
+    transitions:
+      spec_written: specified
+      spec_unwritable: spec_blocked
+
+  specified:
+    next_agent: orchestrator
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/spec.yaml"
+        required_fields: ["content_hash"]
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/implementation/worktree_path"
+      exists: true
+    transitions:
+      worktree_registered: worktree_ready
+      allocation_refused: spec_blocked
+
+  worktree_ready:
+    next_agent: implementation
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/implementation/worktree_path"
+        exists: true
+      - path: "agent_state/hypotheses/<hypothesis_id>/spec.yaml"
+        required_fields: ["content_hash"]
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/implementation/correctness_report.yaml"
+      field: "gate"
+      pass_values: ["passed"]
+      fail_values: ["failed", "amendment_requested"]
+    transitions:
+      passed: implemented
+      failed: bugfix_needed
+      amendment_requested: spec_blocked
+
+  bugfix_needed:
+    next_agent: bugfix
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/implementation/correctness_report.yaml"
+        field: "gate"
+        equals: "failed"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/implementation/bug_reports/<bug_id>.yaml"
+      field: "next_action"
+      pass_values: ["patched"]
+      fail_values:
+        - "spec_amendment_filed"
+        - "falsifier_handoff"
+        - "budget_exhausted"
+        - "repetition_detected"
+    transitions:
+      patched: worktree_ready
+      spec_amendment_filed: spec_blocked
+      falsifier_handoff: falsifier_needed
+      budget_exhausted: bug_budget_exhausted
+      repetition_detected: bug_budget_exhausted
+
+  implemented:
+    next_agent: experiment
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/implementation/correctness_report.yaml"
+        field: "gate"
+        equals: "passed"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/experiments/<experiment_id>/metrics.jsonl"
+      exists: true
+    transitions:
+      metrics_written: measured
+      experiment_failed: bugfix_needed
+
+  measured:
+    next_agent: falsifier
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/experiments/<experiment_id>/metrics.jsonl"
+        exists: true
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/falsifications/<fal_id>.yaml"
+      field: "verdict"
+      pass_values: ["claim_survives"]
+      fail_values: ["claim_falsified", "claim_weakened"]
+    transitions:
+      claim_survives: falsifier_checked
+      claim_falsified: falsified
+      claim_weakened: falsified
+
+  falsifier_needed:
+    next_agent: falsifier
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/implementation/bug_reports/<bug_id>.yaml"
+        field: "next_action"
+        equals: "falsifier_handoff"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/falsifications/<fal_id>.yaml"
+      field: "verdict"
+      pass_values: ["claim_survives"]
+      fail_values: ["claim_falsified", "claim_weakened"]
+    transitions:
+      claim_survives: bugfix_needed
+      claim_falsified: falsified
+      claim_weakened: falsified
+
+  falsifier_checked:
+    next_agent: replication
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/falsifications/<fal_id>.yaml"
+        field: "verdict"
+        equals: "claim_survives"
+      - path: "agent_state/index/claims.jsonl"
+        contains_claim_for: "<hypothesis_id>"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/replications/<replication_id>/report.yaml"
+      field: "verdict"
+      pass_values: ["replicated"]
+      fail_values: ["failed_replication", "partial_replication"]
+    transitions:
+      replicated: replicated
+      failed_replication: replication_failed
+      partial_replication: replication_failed
+
+  replicated:
+    next_agent: verifier
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/replications/<replication_id>/report.yaml"
+        field: "verdict"
+        equals: "replicated"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/verifications/<verification_id>.yaml"
+      field: "final_verdict"
+      pass_values: ["verified"]
+      fail_values: ["verification_failed"]
+    transitions:
+      verified: verified
+      verification_failed: verification_failed
+
+  verified:
+    next_agent: report
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/verifications/<verification_id>.yaml"
+        field: "final_verdict"
+        equals: "verified"
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/reports/<report_id>.md"
+      frontmatter_fields:
+        - "hypothesis_id"
+        - "claim_ids"
+        - "verification_ids"
+        - "replication_ids"
+    transitions:
+      report_written: reported
+      report_blocked: verification_failed
+
+  reported:
+    next_agent: integration
+    input_gates:
+      - path: "agent_state/hypotheses/<hypothesis_id>/reports/<report_id>.md"
+        exists: true
+    output_gate:
+      path: "agent_state/hypotheses/<hypothesis_id>/integration/<integration_id>.yaml"
+      field: "decision"
+      pass_values: ["merge_proposed", "archived"]
+      fail_values: ["rejected"]
+    transitions:
+      merge_proposed: integrated
+      archived: archived
+      rejected: archived
+
+cycle_bootstrap:
+  # These roles are optional producers used when there are no actionable
+  # hypotheses or when the librarian has unresolved evidence gaps. They do not
+  # mutate status.yaml directly.
+  evidence_gap_agent: librarian
+  retrieval_agent: deep-research
+  near_field_agent: brainstorm
+  far_field_agent: boomerang

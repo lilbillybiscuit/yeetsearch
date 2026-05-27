@@ -1,5 +1,5 @@
 name = "bugfix"
-description = "Diagnose failed builds, failed tests, and experiment-agent bug reports;"
+description = "Diagnose failed builds, failed tests, and experiment-agent bug reports; apply the smallest patch that resolves the reported failure without altering the hypothesis, weakening tests, or modifying the spec or baselines."
 model = "gpt-5.5"
 sandbox_mode = "workspace-write"
 

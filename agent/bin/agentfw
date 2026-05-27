@@ -50,6 +50,7 @@ def validate_framework(argv):
     if argv:
         return usage()
     required = [
+        ROOT / "dispatch.yaml",
         ROOT / "agents" / "common-contract.md",
         ROOT / "schemas" / "hypothesis.schema.json",
         ROOT / "schemas" / "spec.schema.json",
@@ -200,9 +201,18 @@ def _extract_description(content: str, fallback: str) -> str:
     lines = content.splitlines()
     for idx, line in enumerate(lines):
         if line.strip() == "## Role":
+            description_lines = []
             for role_line in lines[idx + 1 :]:
-                if role_line.strip():
-                    return role_line.strip()
+                stripped = role_line.strip()
+                if not stripped:
+                    if description_lines:
+                        break
+                    continue
+                if stripped.startswith("#"):
+                    break
+                description_lines.append(stripped)
+            if description_lines:
+                return " ".join(description_lines)
             break
     for line in lines:
         stripped = line.strip()
@@ -230,8 +240,14 @@ def _render_claude_agent(name: str, content: str, agents_out: Path) -> None:
     for key in ("tools", "model"):
         if key in fm:
             header_lines.append(f"{key}: {fm[key]}")
+    common_contract_path = ROOT / "agents" / "common-contract.md"
+    pieces = []
+    if common_contract_path.exists():
+        pieces.append(common_contract_path.read_text().rstrip())
+        pieces.append("")
+    pieces.append(body.lstrip("\n").rstrip())
     (agents_out / f"{name}.md").write_text(
-        "---\n" + "\n".join(header_lines) + "\n---\n\n" + body.lstrip("\n")
+        "---\n" + "\n".join(header_lines) + "\n---\n\n" + "\n".join(pieces) + "\n"
     )
 
 

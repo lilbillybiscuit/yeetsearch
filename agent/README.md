@@ -15,6 +15,7 @@ templates, and one dependency-free CLI.
 ## Layout
 
 - `agents/` - role prompts and file contracts.
+- `dispatch.yaml` - canonical status machine and agent routing table.
 - `skills/` - reusable operational checklists.
 - `schemas/` - machine-readable artifact schemas.
 - `templates/` - starter state-store files.
@@ -36,6 +37,12 @@ For Claude Code, use the rendered `.claude/agents` role prompts as subagent
 definitions. For Codex CLI, this repository keeps the active agent definitions
 in `.codex/agents/*.toml`; use `agent/agents/*.md` as the richer source
 contracts when updating them.
+
+`agent/dispatch.yaml` is the harness-level loop contract. It is intentionally
+separate from `CLAUDE.md`: adopting projects may still provide a `CLAUDE.md`
+for codebase-specific Claude Code guidance, but agent routing and status
+transitions live in `dispatch.yaml` so Claude and Codex read the same state
+machine.
 
 The CLI validates local structure and hashes. It does not provide real
 container isolation, read-only mounts, or model-family assignment by itself;

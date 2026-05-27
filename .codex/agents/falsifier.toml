@@ -1,5 +1,5 @@
 name = "falsifier"
-description = "Try to break claims via adversarial inputs, oracle disagreement, invariant"
+description = "Try to break claims via adversarial inputs, oracle disagreement, invariant violations, robustness perturbations, and counterexample search."
 model = "gpt-5.5"
 sandbox_mode = "workspace-write"
 

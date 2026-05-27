@@ -51,6 +51,28 @@ for name in research-manager specification verifier replication falsifier triage
   test -f "$WORK/prompts/codex/.codex/agents/$name.toml"
 done
 
+# Every next_agent in the dispatch table must exist in both generated rosters.
+python3 - "$ROOT/dispatch.yaml" "$WORK/prompts/claude/.claude/agents" "$WORK/prompts/codex/.codex/agents" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+dispatch_path = Path(sys.argv[1])
+claude_dir = Path(sys.argv[2])
+codex_dir = Path(sys.argv[3])
+
+agents = sorted(set(re.findall(r"^\s*next_agent:\s*([A-Za-z0-9_-]+)\s*$", dispatch_path.read_text(), re.MULTILINE)))
+missing = []
+for agent in agents:
+    if not (claude_dir / f"{agent}.md").exists():
+        missing.append(f"claude:{agent}")
+    if not (codex_dir / f"{agent}.toml").exists():
+        missing.append(f"codex:{agent}")
+if missing:
+    print("dispatch references missing agents:", ", ".join(missing), file=sys.stderr)
+    sys.exit(1)
+PY
+
 # Every codex toml must declare model = "gpt-5.5".
 python3 - "$WORK/prompts/codex/.codex/agents" <<'PY'
 import sys, tomllib
@@ -73,7 +95,7 @@ if bad:
     sys.exit(1)
 PY
 
-# Skills should also render to both as expected.
-test -f "$WORK/prompts/claude/.claude/skills/research-loop/SKILL.md"
+# Skills should render from the remaining canonical skill sources.
+test -f "$WORK/prompts/claude/.claude/skills/artifact-freeze/SKILL.md"
 
 echo "smoke ok"

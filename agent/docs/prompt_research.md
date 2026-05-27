@@ -11,6 +11,266 @@ adopted, not a validated improvement.
 
 ---
 
+## general-agent-prompting
+
+Improvements applied:
+
+1. Canonical prompts now use explicit sections for role, inputs, outputs,
+   tool guidance, forbidden behavior, operating procedure, success criteria,
+   escalation, and termination.
+2. Thin prompts were expanded with concrete output fields, source IDs,
+   artifact paths, and handoff conditions instead of relying on implicit
+   shared context.
+3. Claude and Codex rendered prompts now both include the common agent
+   contract so generated runtimes receive the same universal constraints.
+4. Agent prompts prefer compact high-signal context and explicit pointers
+   over long summaries, so agents retrieve details just in time.
+5. Prompt instructions emphasize structured artifacts, clear boundaries, and
+   treating untrusted source text / agent prose as data rather than
+   instructions.
+
+Sources:
+
+- OpenAI, "Prompt engineering". Pattern: put high-level behavior, goals,
+  constraints, and examples in higher-authority instructions; build evals as
+  prompts evolve; GPT-style models benefit from explicit instructions for
+  complex tasks.
+  <https://developers.openai.com/api/docs/guides/prompt-engineering>
+- OpenAI, "Agent definitions". Pattern: an agent packages model,
+  instructions, tools, guardrails, handoffs, and structured outputs; keep
+  specialist instructions short, concrete, and scoped to a specific task.
+  <https://developers.openai.com/api/docs/guides/agents/define-agents>
+- OpenAI, "Orchestration and handoffs". Pattern: add specialists only when
+  the contract changes; keep routing surfaces narrow and legible; use
+  manager-style workflows when the manager owns final synthesis.
+  <https://developers.openai.com/api/docs/guides/agents/orchestration>
+- Anthropic, "Effective context engineering for AI agents". Pattern: prompts
+  should be clear, direct, and at the right altitude; use distinct sections;
+  optimize for the smallest high-signal context; prefer just-in-time
+  retrieval and structured note-taking for long-horizon work.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+- Anthropic, "How we built our multi-agent research system". Pattern:
+  subagents need objective, output format, tool/source guidance, and task
+  boundaries; scale effort to task complexity; prefer source-quality
+  heuristics, parallel exploration, and artifact-backed handoffs.
+  <https://www.anthropic.com/engineering/multi-agent-research-system>
+
+---
+
+## ideation-agents
+
+Improvements applied:
+
+1. Brainstorm and boomerang now require mechanism, source IDs, falsifiability,
+   information gain, and dead-end checks for every candidate.
+2. Boomerang distinguishes the analogy search process from the final
+   hypothesis artifact, requiring translation and breakage points.
+3. Both ideation agents prefer small high-signal batches over filling quota
+   with near-duplicates.
+
+Sources:
+
+- Anthropic, "How we built our multi-agent research system". Pattern: start
+  broad, then narrow; encode expert search heuristics rather than brittle
+  rules; require clear objective, output format, and task boundaries for
+  subagents.
+  <https://www.anthropic.com/engineering/multi-agent-research-system>
+- Anthropic, "Effective context engineering for AI agents". Pattern: prompts
+  should supply enough concrete signals without hardcoding brittle logic.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+
+---
+
+## retrieval-agents
+
+Improvements applied:
+
+1. Deep-research records source identity, retrieval metadata, exact excerpts,
+   source type, reliability notes, and request IDs.
+2. Retrieval is explicitly separated from synthesis; conflicts are preserved
+   instead of resolved by the retrieval agent.
+3. Librarian prompts prioritize compact, source-backed indexes and open
+   questions over long pasted context.
+
+Sources:
+
+- Anthropic, "Effective context engineering for AI agents". Pattern:
+  just-in-time retrieval, structured notes, and pointers reduce context
+  overload in long-horizon agents.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+- OpenAI, "Prompt engineering". Pattern: structured outputs and explicit
+  instructions reduce ambiguity for downstream consumers.
+  <https://developers.openai.com/api/docs/guides/prompt-engineering>
+
+---
+
+## librarian
+
+Improvements applied:
+
+1. Librarian now owns durable context curation: source summaries, reliability
+   labels, source-backed claims, conflicts, and open questions.
+2. Summaries are optimized as retrievable pointers rather than large context
+   dumps.
+
+Sources:
+
+- Anthropic, "Effective context engineering for AI agents". Pattern:
+  structured note-taking and small high-signal context are central to
+  long-horizon agent reliability.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+
+---
+
+## baseline
+
+Improvements applied:
+
+1. Baseline now treats every change as a compatibility-preserving migration.
+2. Review records require changed paths, compatibility criteria, old-vs-new
+   evidence, affected downstream artifacts, and a decision.
+3. Conflicted self-approval is forbidden when a claim depends on the affected
+   baseline.
+
+Sources:
+
+- OpenAI, "Agent definitions". Pattern: specialist agents should have narrow
+  jobs, clear constraints, and structured output when downstream code or
+  agents need typed data.
+  <https://developers.openai.com/api/docs/guides/agents/define-agents>
+- Anthropic, "How we built our multi-agent research system". Pattern:
+  artifact-backed handoffs and clear task boundaries prevent coordination
+  failures in multi-agent systems.
+  <https://www.anthropic.com/engineering/multi-agent-research-system>
+
+---
+
+## experiment
+
+Improvements applied:
+
+1. Experiment now binds every run to spec hash, commit hash, seeds, workloads,
+   methods, resources, and metric extraction command before execution.
+2. Raw logs are the source of truth; metrics are derived mechanically and never
+   hand-authored.
+3. Failures are preserved as evidence rather than patched around.
+
+Sources:
+
+- OpenAI, "Prompt engineering". Pattern: explicit instructions and structured
+  outputs improve consistency for complex tasks.
+  <https://developers.openai.com/api/docs/guides/prompt-engineering>
+- Anthropic, "Effective context engineering for AI agents". Pattern: tool
+  contracts and context curation matter because tools define the agent's
+  interaction boundary with the environment.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+
+---
+
+## reporting
+
+Improvements applied:
+
+1. Report now requires frontmatter binding to claim, verification,
+   replication, and source IDs.
+2. Reports must preserve scope, limitations, failed or inconclusive
+   hypotheses, and reproducibility pointers.
+3. Reporter cannot introduce new claims or upgrade confidence.
+
+Sources:
+
+- OpenAI, "Prompt engineering". Pattern: specify desired outcome, format,
+  scope, and constraints explicitly.
+  <https://developers.openai.com/api/docs/guides/prompt-engineering>
+- Anthropic, "How we built our multi-agent research system". Pattern: final
+  outputs should reconcile findings against citations and source quality.
+  <https://www.anthropic.com/engineering/multi-agent-research-system>
+
+---
+
+## integration
+
+Improvements applied:
+
+1. Integration now separates verified/replicated evidence from mainline merge
+   suitability.
+2. Merge proposals require evidence IDs, test preservation, reusable paths,
+   scaffolding decisions, and rollback notes.
+
+Sources:
+
+- OpenAI, "Orchestration and handoffs". Pattern: split specialists only when
+  capability, policy, output style, or trace legibility changes.
+  <https://developers.openai.com/api/docs/guides/agents/orchestration>
+- Anthropic, "How we built our multi-agent research system". Pattern:
+  multi-agent systems require artifact-backed coordination and outcome-focused
+  evaluation rather than trusting a single prose summary.
+  <https://www.anthropic.com/engineering/multi-agent-research-system>
+
+---
+
+## resource-allocation
+
+Improvements applied:
+
+1. Resource allocator now treats environment records as evidence-chain
+   artifacts.
+2. Allocation decisions are `approved`, `queued`, or `refused`, with explicit
+   reasons; isolation and mount policy fail closed.
+
+Sources:
+
+- Anthropic, "Effective context engineering for AI agents". Pattern: tools
+  form the contract between agents and their environment, so tool boundaries
+  and outputs must be clear.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+
+---
+
+## orchestration
+
+Improvements applied:
+
+1. Orchestrator now binds worktrees to spec hash, mainline commit, hooks, and
+   baseline mount policy before implementation starts.
+2. Worktree metadata is made audit-friendly so downstream agents do not need
+   hidden context.
+
+Sources:
+
+- OpenAI, "Orchestration and handoffs". Pattern: manager-style workflows keep
+  one stable owner while specialists perform bounded tasks.
+  <https://developers.openai.com/api/docs/guides/agents/orchestration>
+- Anthropic, "How we built our multi-agent research system". Pattern: lead
+  agents should provide clear boundaries and output contracts to downstream
+  workers.
+  <https://www.anthropic.com/engineering/multi-agent-research-system>
+
+---
+
+## implementation
+
+Improvements applied:
+
+1. Implementation now emphasizes minimal, spec-bound work and explicit
+   amendment requests for ambiguity.
+2. The prompt directs the agent to keep context focused on the spec,
+   baselines, oracle contracts, and relevant code.
+3. Hidden requirements from prior agent prose are rejected in favor of the
+   frozen spec.
+
+Sources:
+
+- OpenAI, "Prompt engineering". Pattern: coding prompts benefit from clear
+  role definition, structured tool use, and correctness testing expectations.
+  <https://developers.openai.com/api/docs/guides/prompt-engineering>
+- Anthropic, "Effective context engineering for AI agents". Pattern:
+  high-signal context and just-in-time retrieval reduce distraction in complex
+  coding tasks.
+  <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
+
+---
+
 ## research-manager
 
 Improvements applied:

@@ -1,5 +1,5 @@
 name = "triage"
-description = "Filter and rank candidate hypotheses; promote only the top-K with explicit"
+description = "Filter and rank candidate hypotheses; promote only the top-K with explicit rationale."
 model = "gpt-5.5"
 sandbox_mode = "read-only"
 
