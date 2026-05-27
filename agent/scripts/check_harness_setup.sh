@@ -11,15 +11,6 @@ if [[ ! -d "agent_state" ]]; then
 fi
 
 required_files=(
-  ".claude/agents/research-manager.md"
-  ".claude/agents/specification.md"
-  ".claude/agents/implementation.md"
-  ".claude/agents/experiment.md"
-  ".codex/agents/triage.toml"
-  ".codex/agents/verifier.toml"
-  ".codex/agents/replication.toml"
-  ".codex/agents/falsifier.toml"
-  ".codex/agents/bugfix.toml"
   "agent_state/index/hypotheses.jsonl"
   "agent_state/index/claims.jsonl"
   "agent_state/index/known_dead_ends.jsonl"
@@ -30,7 +21,22 @@ required_files=(
   "agent/git-hooks/commit-msg"
   "agent/containers/replication.Dockerfile"
   "agent/bin/agentfw"
+  "agent/agents/common-contract.md"
 )
+
+# Every non-common agent under agent/agents/ must have a Claude .md and a
+# Codex .toml mirror, both freshly rendered from the canonical source.
+for src in agent/agents/*.md; do
+  name="$(basename "$src" .md)"
+  [[ "$name" == "common-contract" ]] && continue
+  required_files+=(".claude/agents/$name.md" ".codex/agents/$name.toml")
+done
+
+# Every skill under agent/skills/ must have a Claude SKILL.md mirror.
+for src in agent/skills/*.md; do
+  name="$(basename "$src" .md)"
+  required_files+=(".claude/skills/$name/SKILL.md")
+done
 
 for path in "${required_files[@]}"; do
   if [[ ! -e "$path" ]]; then

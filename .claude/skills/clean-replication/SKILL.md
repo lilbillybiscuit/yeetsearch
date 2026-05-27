@@ -1,3 +1,8 @@
+---
+name: clean-replication
+description: Use for replication agent runs.
+---
+
 # Skill: clean-replication
 
 Use for replication agent runs.

@@ -1,3 +1,8 @@
+---
+name: project-ingestion
+description: Use when testing the framework against an arbitrary project.
+---
+
 # Skill: project-ingestion
 
 Use when testing the framework against an arbitrary project.

@@ -1,3 +1,8 @@
+---
+name: artifact-freeze
+description: Use when creating any artifact consumed by another agent.
+---
+
 # Skill: artifact-freeze
 
 Use when creating any artifact consumed by another agent.

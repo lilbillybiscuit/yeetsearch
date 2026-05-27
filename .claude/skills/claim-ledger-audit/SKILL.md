@@ -1,3 +1,8 @@
+---
+name: claim-ledger-audit
+description: Use when writing or verifying any report with claims.
+---
+
 # Skill: claim-ledger-audit
 
 Use when writing or verifying any report with claims.

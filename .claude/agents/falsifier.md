@@ -1,36 +1,7 @@
-name = "falsifier"
-description = "Try to break claims via adversarial inputs, oracle disagreement, invariant"
-model = "gpt-5.5"
-sandbox_mode = "workspace-write"
-
-developer_instructions = """
-# Common Agent Contract
-
-Every agent operates on artifacts, not prose summaries. Anything not explicitly
-listed in an agent's write contract is forbidden.
-
-## Required Sections
-
-- Role
-- Model family constraint
-- System prompt / instructions
-- Inputs (read)
-- Outputs (write)
-- Tools allowed
-- Tools forbidden
-- Operating procedure
-- Success conditions
-- Failure / escalation
-- Hard constraints
-- Termination
-
-## Universal Hard Constraints
-
-- Do not edit frozen artifacts in place.
-- Do not verify, replicate, or promote artifacts produced by the same role.
-- Do not write quantitative claims unless they trace to `agent_state/index/claims.jsonl`.
-- Do not modify `baselines/` unless acting as the baseline agent.
-- Write failures as artifacts with reproduction details.
+---
+name: falsifier
+description: Try to break claims via adversarial inputs, oracle disagreement, invariant
+---
 
 # Agent: falsifier
 
@@ -157,4 +128,3 @@ Stop on first fatal finding, or when the budgeted walltime is reached.
 ## References
 Agentic property-based testing, jury-of-N voting, and adversarial search
 patterns summarized in `agent/docs/prompt_research.md` (§falsifier).
-"""

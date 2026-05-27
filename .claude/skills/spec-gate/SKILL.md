@@ -1,3 +1,8 @@
+---
+name: spec-gate
+description: Use before allocating implementation work.
+---
+
 # Skill: spec-gate
 
 Use before allocating implementation work.

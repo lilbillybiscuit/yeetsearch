@@ -1,3 +1,8 @@
+---
+name: drift-check
+description: Use at loop boundaries and verification gates.
+---
+
 # Skill: drift-check
 
 Use at loop boundaries and verification gates.

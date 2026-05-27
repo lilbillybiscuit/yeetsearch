@@ -171,14 +171,99 @@ def inspect_project(argv):
     return 0
 
 
-CODEX_FAMILY_AGENTS = {
-    "triage",
-    "verifier",
-    "replication",
-    "falsifier",
-    "bugfix",
-}
 NON_AGENT_FILES = {"common-contract"}
+CODEX_MODEL = "gpt-5.5"
+CODEX_SANDBOX_OVERRIDES = {
+    "verifier": "read-only",
+    "triage": "read-only",
+}
+CODEX_SANDBOX_DEFAULT = "workspace-write"
+
+
+def _split_frontmatter(content: str):
+    if not content.startswith("---\n"):
+        return {}, content
+    end = content.find("\n---\n", 4)
+    if end == -1:
+        return {}, content
+    raw = content[4:end]
+    body = content[end + 5 :]
+    fm = {}
+    for line in raw.splitlines():
+        if ":" in line:
+            key, _, value = line.partition(":")
+            fm[key.strip()] = value.strip()
+    return fm, body
+
+
+def _extract_description(content: str, fallback: str) -> str:
+    lines = content.splitlines()
+    for idx, line in enumerate(lines):
+        if line.strip() == "## Role":
+            for role_line in lines[idx + 1 :]:
+                if role_line.strip():
+                    return role_line.strip()
+            break
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            return stripped
+    return fallback
+
+
+def _toml_string(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _toml_multiline(value: str) -> str:
+    escaped = value.replace("\\", "\\\\")
+    if '"""' in escaped:
+        escaped = escaped.replace('"""', '\\"\\"\\"')
+    return f'"""\n{escaped}\n"""'
+
+
+def _render_claude_agent(name: str, content: str, agents_out: Path) -> None:
+    fm, body = _split_frontmatter(content)
+    description = fm.get("description") or _extract_description(content, f"{name} agent.")
+    header_lines = [f"name: {name}", f"description: {description}"]
+    for key in ("tools", "model"):
+        if key in fm:
+            header_lines.append(f"{key}: {fm[key]}")
+    (agents_out / f"{name}.md").write_text(
+        "---\n" + "\n".join(header_lines) + "\n---\n\n" + body.lstrip("\n")
+    )
+
+
+def _render_claude_skill(name: str, content: str, skills_out: Path) -> None:
+    fm, body = _split_frontmatter(content)
+    description = fm.get("description") or _extract_description(content, f"{name} skill.")
+    skill_dir = skills_out / name
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text(
+        f"---\nname: {name}\ndescription: {description}\n---\n\n" + body.lstrip("\n")
+    )
+
+
+def _render_codex_agent(name: str, content: str, agents_out: Path) -> None:
+    fm, _ = _split_frontmatter(content)
+    description = fm.get("description") or _extract_description(content, f"{name} agent.")
+    sandbox = CODEX_SANDBOX_OVERRIDES.get(name, CODEX_SANDBOX_DEFAULT)
+    common_contract_path = ROOT / "agents" / "common-contract.md"
+    pieces = []
+    if common_contract_path.exists():
+        pieces.append(common_contract_path.read_text().rstrip())
+        pieces.append("")
+    pieces.append(content.rstrip())
+    instructions = "\n".join(pieces)
+    toml = (
+        f"name = {_toml_string(name)}\n"
+        f"description = {_toml_string(description)}\n"
+        f"model = {_toml_string(CODEX_MODEL)}\n"
+        f"sandbox_mode = {_toml_string(sandbox)}\n\n"
+        f"developer_instructions = {_toml_multiline(instructions)}\n"
+    )
+    (agents_out / f"{name}.toml").write_text(toml)
 
 
 def render_prompts(argv):
@@ -187,51 +272,27 @@ def render_prompts(argv):
     target = argv[0]
     out = Path(argv[1])
     out.mkdir(parents=True, exist_ok=True)
-    if target == "codex":
-        body = ["# Generated Agent Framework for Codex\n"]
-        for path in sorted((ROOT / "agents").glob("*.md")):
-            body.append("\n---\n")
-            body.append(path.read_text())
-        body.append("\n---\n# Skills\n")
-        for path in sorted((ROOT / "skills").glob("*.md")):
-            body.append("\n---\n")
-            body.append(path.read_text())
-        (out / "AGENTS.generated.md").write_text("".join(body))
-    else:
+
+    agents = [
+        p for p in sorted((ROOT / "agents").glob("*.md")) if p.stem not in NON_AGENT_FILES
+    ]
+    skills = sorted((ROOT / "skills").glob("*.md"))
+
+    if target == "claude":
         agents_out = out / ".claude" / "agents"
         agents_out.mkdir(parents=True, exist_ok=True)
-        for path in sorted((ROOT / "agents").glob("*.md")):
-            if path.stem in CODEX_FAMILY_AGENTS or path.stem in NON_AGENT_FILES:
-                continue
-            content = path.read_text()
-            target_path = agents_out / path.name
-            if content.startswith("---\n"):
-                target_path.write_text(content)
-                continue
-            name = path.stem
-            description = "Research harness agent."
-            lines = content.splitlines()
-            for idx, line in enumerate(lines):
-                if line.strip() == "## Role":
-                    role_lines = []
-                    for role_line in lines[idx + 1:]:
-                        if not role_line.strip():
-                            break
-                        role_lines.append(role_line.strip())
-                    if role_lines:
-                        description = " ".join(role_lines)
-                    break
-            target_path.write_text(
-                "---\n"
-                f"name: {name}\n"
-                f"description: {description}\n"
-                "---\n\n"
-                + content
-            )
+        for path in agents:
+            _render_claude_agent(path.stem, path.read_text(), agents_out)
         skills_out = out / ".claude" / "skills"
         skills_out.mkdir(parents=True, exist_ok=True)
-        for path in sorted((ROOT / "skills").glob("*.md")):
-            shutil.copy2(path, skills_out / path.name)
+        for path in skills:
+            _render_claude_skill(path.stem, path.read_text(), skills_out)
+    else:
+        agents_out = out / ".codex" / "agents"
+        agents_out.mkdir(parents=True, exist_ok=True)
+        for path in agents:
+            _render_codex_agent(path.stem, path.read_text(), agents_out)
+
     print(str(out))
     return 0
 
