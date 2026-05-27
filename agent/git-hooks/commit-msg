@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${HARNESS_ALLOW_INITIALIZE:-}" == "1" ]]; then
+  exit 0
+fi
+
+HYP_ID="$(cat .hyp_id 2>/dev/null || true)"
+if [[ -z "$HYP_ID" ]]; then
+  echo "No .hyp_id file in worktree root" >&2
+  exit 1
+fi
+
+COMMIT_MSG_FILE="${1:?commit-msg hook requires a message file}"
+FIRST_LINE="$(sed -n '1p' "$COMMIT_MSG_FILE")"
+if [[ ! "$FIRST_LINE" =~ ^\[$HYP_ID\] ]]; then
+  echo "Commit message must begin with [$HYP_ID]" >&2
+  exit 1
+fi

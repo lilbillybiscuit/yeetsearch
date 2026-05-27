@@ -1,0 +1,17 @@
+hypothesis_id: "hyp_template"
+created_at: "1970-01-01T00:00:00Z"
+created_by: "brainstorm_agent"
+parent_question: "Replace with the parent research question."
+hypothesis: "Replace with a concrete, testable claim."
+mechanism: "Replace with the causal mechanism."
+origin:
+  source_agent: "brainstorm_agent"
+  inspiration: "Replace with triggering source."
+  related_artifacts: []
+  prior_art_refs: []
+claim_type: ["empirical"]
+falsifiability:
+  must_be_testable_on: "Replace with smallest test artifact."
+  null_result: "Replace with falsifying observation."
+  positive_result: "Replace with supporting observation."
+content_hash: "sha256:0000000000000000000000000000000000000000000000000000000000000000"

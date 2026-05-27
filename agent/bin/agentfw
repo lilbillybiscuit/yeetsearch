@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def usage():
+    print(
+        "usage: agentfw <init-state|validate-framework|hash-file|freeze-artifact|"
+        "verify-artifact|inspect-project|render-prompts> ...",
+        file=sys.stderr,
+    )
+    return 2
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return "sha256:" + h.hexdigest()
+
+
+def copytree_contents(src: Path, dst: Path) -> None:
+    dst.mkdir(parents=True, exist_ok=True)
+    for item in src.iterdir():
+        target = dst / item.name
+        if item.is_dir():
+            shutil.copytree(item, target, dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, target)
+
+
+def init_state(argv):
+    if len(argv) != 1:
+        return usage()
+    target = Path(argv[0])
+    copytree_contents(ROOT / "templates" / "agent_state", target)
+    print(str(target))
+    return 0
+
+
+def validate_framework(argv):
+    if argv:
+        return usage()
+    required = [
+        ROOT / "agents" / "common-contract.md",
+        ROOT / "schemas" / "hypothesis.schema.json",
+        ROOT / "schemas" / "spec.schema.json",
+        ROOT / "templates" / "agent-manifest.yaml",
+    ]
+    missing = [str(p) for p in required if not p.exists()]
+    if missing:
+        print(json.dumps({"ok": False, "missing": missing}, indent=2))
+        return 1
+    schema_errors = []
+    for path in sorted((ROOT / "schemas").glob("*.json")):
+        try:
+            json.loads(path.read_text())
+        except Exception as exc:
+            schema_errors.append({"path": str(path), "error": str(exc)})
+    ok = not schema_errors
+    print(json.dumps({"ok": ok, "schema_errors": schema_errors}, indent=2))
+    return 0 if ok else 1
+
+
+def hash_file(argv):
+    if len(argv) != 1:
+        return usage()
+    print(sha256_file(Path(argv[0])))
+    return 0
+
+
+def freeze_artifact(argv):
+    if len(argv) != 1:
+        return usage()
+    path = Path(argv[0])
+    digest = sha256_file(path)
+    sidecar = path.with_suffix(path.suffix + ".sha256")
+    sidecar.write_text(digest + "\n")
+    try:
+        mode = path.stat().st_mode
+        path.chmod(mode & ~0o222)
+    except OSError:
+        pass
+    print(digest)
+    return 0
+
+
+def verify_artifact(argv):
+    if len(argv) != 1:
+        return usage()
+    path = Path(argv[0])
+    sidecar = path.with_suffix(path.suffix + ".sha256")
+    if not sidecar.exists():
+        print(json.dumps({"ok": False, "error": "missing sidecar"}))
+        return 1
+    expected = sidecar.read_text().strip()
+    observed = sha256_file(path)
+    ok = expected == observed
+    print(json.dumps({"ok": ok, "expected": expected, "observed": observed}, indent=2))
+    return 0 if ok else 1
+
+
+def run_git(repo: Path, args):
+    try:
+        return subprocess.run(
+            ["git"] + args,
+            cwd=repo,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+        )
+    except Exception as exc:
+        return exc
+
+
+def inspect_project(argv):
+    if len(argv) != 2:
+        return usage()
+    repo = Path(argv[0]).resolve()
+    out = Path(argv[1])
+    rev = run_git(repo, ["rev-parse", "HEAD"])
+    if isinstance(rev, subprocess.CompletedProcess) and rev.returncode == 0:
+        git_commit = rev.stdout.strip()
+        git_error = None
+    else:
+        git_commit = None
+        git_error = getattr(rev, "stderr", str(rev)).strip()
+    files = []
+    for path in sorted(repo.rglob("*")):
+        rel = path.relative_to(repo)
+        if any(part in {".git", "cmake-build-debug", "build"} for part in rel.parts):
+            continue
+        if path.is_file():
+            files.append(str(rel))
+        if len(files) >= 300:
+            break
+    instruction_files = []
+    for name in ["AGENTS.md", "CLAUDE.md", "README.md"]:
+        p = repo / name
+        if p.exists():
+            instruction_files.append(str(p.relative_to(repo)))
+    docs = {}
+    for name in [
+        "docs/problem_spec.md",
+        "docs/experiment_plan.md",
+        "docs/research_log.md",
+        "docs/implementation_notes.md",
+    ]:
+        p = repo / name
+        docs[name] = p.exists()
+    snapshot = {
+        "project_path": str(repo),
+        "git_commit": git_commit,
+        "git_error": git_error,
+        "instruction_files": instruction_files,
+        "required_docs": docs,
+        "file_sample": files,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(snapshot, indent=2) + "\n")
+    print(str(out))
+    return 0
+
+
+CODEX_FAMILY_AGENTS = {
+    "triage",
+    "verifier",
+    "replication",
+    "falsifier",
+    "bugfix",
+}
+NON_AGENT_FILES = {"common-contract"}
+
+
+def render_prompts(argv):
+    if len(argv) != 2 or argv[0] not in {"codex", "claude"}:
+        return usage()
+    target = argv[0]
+    out = Path(argv[1])
+    out.mkdir(parents=True, exist_ok=True)
+    if target == "codex":
+        body = ["# Generated Agent Framework for Codex\n"]
+        for path in sorted((ROOT / "agents").glob("*.md")):
+            body.append("\n---\n")
+            body.append(path.read_text())
+        body.append("\n---\n# Skills\n")
+        for path in sorted((ROOT / "skills").glob("*.md")):
+            body.append("\n---\n")
+            body.append(path.read_text())
+        (out / "AGENTS.generated.md").write_text("".join(body))
+    else:
+        agents_out = out / ".claude" / "agents"
+        agents_out.mkdir(parents=True, exist_ok=True)
+        for path in sorted((ROOT / "agents").glob("*.md")):
+            if path.stem in CODEX_FAMILY_AGENTS or path.stem in NON_AGENT_FILES:
+                continue
+            content = path.read_text()
+            target_path = agents_out / path.name
+            if content.startswith("---\n"):
+                target_path.write_text(content)
+                continue
+            name = path.stem
+            description = "Research harness agent."
+            lines = content.splitlines()
+            for idx, line in enumerate(lines):
+                if line.strip() == "## Role":
+                    role_lines = []
+                    for role_line in lines[idx + 1:]:
+                        if not role_line.strip():
+                            break
+                        role_lines.append(role_line.strip())
+                    if role_lines:
+                        description = " ".join(role_lines)
+                    break
+            target_path.write_text(
+                "---\n"
+                f"name: {name}\n"
+                f"description: {description}\n"
+                "---\n\n"
+                + content
+            )
+        skills_out = out / ".claude" / "skills"
+        skills_out.mkdir(parents=True, exist_ok=True)
+        for path in sorted((ROOT / "skills").glob("*.md")):
+            shutil.copy2(path, skills_out / path.name)
+    print(str(out))
+    return 0
+
+
+def main():
+    if len(sys.argv) < 2:
+        return usage()
+    cmd, argv = sys.argv[1], sys.argv[2:]
+    commands = {
+        "init-state": init_state,
+        "validate-framework": validate_framework,
+        "hash-file": hash_file,
+        "freeze-artifact": freeze_artifact,
+        "verify-artifact": verify_artifact,
+        "inspect-project": inspect_project,
+        "render-prompts": render_prompts,
+    }
+    if cmd not in commands:
+        return usage()
+    return commands[cmd](argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

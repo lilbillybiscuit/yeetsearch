@@ -1,0 +1,38 @@
+hypothesis_id: "hyp_template"
+hypothesis_hash: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+mechanism: "Restate the mechanism."
+minimal_implementation:
+  what_must_exist:
+    - "Replace with required component."
+  what_must_not_exist:
+    - "Replace with non-goal."
+correctness_criteria:
+  - description: "Replace with invariant."
+    test_location: "tests/correctness/"
+    reference_oracle: "baselines/oracles/replace_me"
+baselines:
+  - id: "baseline_a"
+    path: "baselines/baseline_a/"
+    is_read_only: true
+evaluation:
+  primary_metric: "replace_metric"
+  metric_extraction: "scripts/extract_replace_metric.py"
+  seeds: [0]
+  significance_test: "bootstrap_ci"
+  workloads:
+    - id: "small"
+      generator: "workloads/small.py"
+      args: {}
+required_resources:
+  cpu_cores: 1
+  memory_gb: 1
+  gpu: null
+  walltime_minutes: 5
+success_condition: "Replace with concrete success condition."
+failure_condition: "Replace with concrete failure condition."
+inconclusive_condition: "Replace with inconclusive condition."
+expected_failure_modes: []
+budgets:
+  max_bugfix_iterations: 1
+  max_experiment_runs: 1
+  max_walltime_hours: 1

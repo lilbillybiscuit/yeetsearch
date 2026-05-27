@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaimLedgerRecord",
+  "type": "object",
+  "required": [
+    "claim_id",
+    "hypothesis_id",
+    "claim_text",
+    "evidence_refs",
+    "verifier_id",
+    "replication_id",
+    "established_at",
+    "scope"
+  ],
+  "properties": {
+    "claim_id": {"type": "string"},
+    "hypothesis_id": {"type": "string"},
+    "claim_text": {"type": "string"},
+    "evidence_refs": {"type": "array", "items": {"type": "string"}},
+    "verifier_id": {"type": "string"},
+    "replication_id": {"type": "string"},
+    "established_at": {"type": "string"},
+    "scope": {"type": "string"}
+  }
+}

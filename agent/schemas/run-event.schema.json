@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunEvent",
+  "type": "object",
+  "required": ["event", "ts", "hypothesis_id", "experiment_id"],
+  "properties": {
+    "event": {"enum": ["run_start", "measurement", "run_end"]},
+    "ts": {"type": "string"},
+    "hypothesis_id": {"type": "string"},
+    "experiment_id": {"type": "string"},
+    "spec_hash": {"type": "string"},
+    "git_commit": {"type": ["string", "null"]},
+    "baseline_commit": {"type": ["string", "null"]},
+    "command": {"type": "string"},
+    "seed": {"type": "integer"},
+    "workload_id": {"type": "string"},
+    "method": {"type": "string"},
+    "metric": {"type": "string"},
+    "value": {"type": "number"},
+    "exit_code": {"type": "integer"},
+    "duration_seconds": {"type": "number"}
+  }
+}

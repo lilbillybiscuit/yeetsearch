@@ -1,0 +1,6 @@
+hypothesis_id: "hyp_template"
+current_status: "proposed"
+history:
+  - status: "proposed"
+    at: "1970-01-01T00:00:00Z"
+    by: "framework_template"

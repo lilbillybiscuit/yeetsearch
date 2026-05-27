@@ -1,0 +1,31 @@
+framework_version: "0.1.0"
+roles:
+  - research_manager
+  - librarian
+  - deep_research
+  - brainstorm
+  - boomerang
+  - triage
+  - specification
+  - orchestrator
+  - resource_allocator
+  - implementation
+  - experiment
+  - bugfix
+  - baseline
+  - falsifier
+  - verifier
+  - replication
+  - integration
+  - report
+model_family_constraints:
+  verifier: "different from implementation, experiment, and bugfix"
+  falsifier: "different from implementation and experiment"
+  replication: "different from implementation"
+immutable_artifacts:
+  - "hypotheses/*/hypothesis.yaml"
+  - "hypotheses/*/spec.yaml"
+append_only_artifacts:
+  - "index/hypotheses.jsonl"
+  - "index/claims.jsonl"
+  - "index/known_dead_ends.jsonl"

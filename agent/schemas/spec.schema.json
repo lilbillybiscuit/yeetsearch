@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Spec",
+  "type": "object",
+  "required": [
+    "hypothesis_id",
+    "hypothesis_hash",
+    "mechanism",
+    "minimal_implementation",
+    "correctness_criteria",
+    "baselines",
+    "evaluation",
+    "required_resources",
+    "success_condition",
+    "failure_condition",
+    "inconclusive_condition",
+    "expected_failure_modes",
+    "budgets"
+  ],
+  "properties": {
+    "hypothesis_id": {"type": "string"},
+    "hypothesis_hash": {"type": "string"},
+    "mechanism": {"type": "string"},
+    "minimal_implementation": {
+      "type": "object",
+      "required": ["what_must_exist", "what_must_not_exist"]
+    },
+    "correctness_criteria": {"type": "array"},
+    "baselines": {"type": "array"},
+    "evaluation": {
+      "type": "object",
+      "required": ["primary_metric", "metric_extraction", "seeds", "significance_test", "workloads"]
+    },
+    "required_resources": {"type": "object"},
+    "success_condition": {"type": "string"},
+    "failure_condition": {"type": "string"},
+    "inconclusive_condition": {"type": "string"},
+    "expected_failure_modes": {"type": "array"},
+    "budgets": {"type": "object"}
+  }
+}

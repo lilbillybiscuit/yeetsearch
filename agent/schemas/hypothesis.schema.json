@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hypothesis",
+  "type": "object",
+  "required": [
+    "hypothesis_id",
+    "created_at",
+    "created_by",
+    "parent_question",
+    "hypothesis",
+    "mechanism",
+    "origin",
+    "claim_type",
+    "falsifiability",
+    "content_hash"
+  ],
+  "properties": {
+    "hypothesis_id": {"type": "string", "pattern": "^hyp_[0-9A-Za-z_-]+$"},
+    "created_at": {"type": "string"},
+    "created_by": {"type": "string"},
+    "parent_question": {"type": "string"},
+    "hypothesis": {"type": "string"},
+    "mechanism": {"type": "string"},
+    "origin": {"type": "object"},
+    "claim_type": {"type": "array", "items": {"type": "string"}},
+    "falsifiability": {"type": "object"},
+    "content_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

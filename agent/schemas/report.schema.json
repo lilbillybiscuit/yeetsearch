@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReplicationOrVerificationReport",
+  "type": "object",
+  "required": ["hypothesis_id", "spec_hash", "verdict"],
+  "properties": {
+    "hypothesis_id": {"type": "string"},
+    "spec_hash": {"type": "string"},
+    "verdict": {"type": "string"},
+    "findings": {"type": "array"},
+    "notes": {"type": "array"}
+  }
+}

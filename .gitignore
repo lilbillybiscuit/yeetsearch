@@ -1,0 +1,7 @@
+/agent_state/
+/worktrees/
+*.pyc
+__pycache__/
+.venv/
+*.log
+.DS_Store

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HYP_ID="$(cat .hyp_id 2>/dev/null || true)"
+if [[ -z "$HYP_ID" ]]; then
+  echo "No .hyp_id file in worktree root" >&2
+  exit 1
+fi
+
+CHANGED="$(git diff --cached --name-only)"
+if [[ -z "$CHANGED" ]]; then
+  exit 0
+fi
+
+if [[ "${HARNESS_ALLOW_INITIALIZE:-}" != "1" ]]; then
+  while IFS= read -r path; do
+    case "$path" in
+      SPEC_HASH|.hyp_id)
+        echo "Cannot modify immutable worktree file: $path" >&2
+        exit 1
+        ;;
+      agent_state/hypotheses/"$HYP_ID"/spec.yaml|agent_state/hypotheses/"$HYP_ID"/hypothesis.yaml)
+        echo "Cannot modify frozen hypothesis/spec artifact: $path" >&2
+        exit 1
+        ;;
+    esac
+  done <<< "$CHANGED"
+fi
+
+if printf '%s\n' "$CHANGED" | awk '/^(baselines|agent\/baselines)\// { found=1 } END { exit found ? 0 : 1 }'; then
+  echo "Cannot modify baselines from worktree $HYP_ID" >&2
+  exit 1
+fi
+
+if printf '%s\n' "$CHANGED" | awk -v hyp="$HYP_ID" '
+  index($0, "agent_state/hypotheses/") == 1 && index($0, "agent_state/hypotheses/" hyp "/") != 1 {
+    found=1
+  }
+  END { exit found ? 0 : 1 }
+'; then
+  echo "Cannot modify other hypotheses' state from worktree $HYP_ID" >&2
+  exit 1
+fi
